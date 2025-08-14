@@ -1,0 +1,40 @@
+const qrcode = require('qrcode-terminal');
+const { Client, LocalAuth } = require('whatsapp-web.js');
+
+const client = new Client({
+    authStrategy: new LocalAuth()
+});
+
+client.on('qr', qr => {
+    qrcode.generate(qr, { small: true });
+});
+
+client.on('ready', () => {
+    console.log('✅ Bot listo y conectado');
+});
+
+// 📌 Etiquetar a todos con !todos
+client.on('message', async message => {
+    if (message.body === '!todos' && message.from.endsWith('@g.us')) {
+        const chat = await message.getChat();
+        let mentions = [];
+        let text = '';
+
+        for (let participant of chat.participants) {
+            const contact = await client.getContactById(participant.id._serialized);
+            mentions.push(contact);
+            text += `@${participant.id.user} `;
+        }
+
+        chat.sendMessage(text, { mentions });
+    }
+});
+
+// 📌 Mensaje de bienvenida cuando alguien entra
+client.on('group_join', async notification => {
+    const chat = await notification.getChat();
+    const contact = await client.getContactById(notification.id.participant);
+    chat.sendMessage(`👋 ¡Bienvenido/a @${contact.number}!`, { mentions: [contact] });
+});
+
+client.initialize();
